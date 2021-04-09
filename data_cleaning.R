@@ -167,3 +167,78 @@ CGM_Grouped <-
 # Merging both dataframes together
 diabetes_full <- merge(CGM_Grouped, Insulin_Carbs_Grouped, all = TRUE)
 
+# Adding time of day labels
+
+diabetes_full <-
+  diabetes_full %>%
+  mutate(time_of_day = case_when(
+    hour >= 4 & hour <= 11 ~ 'morning',
+    hour >= 12 & hour <= 18 ~ 'afternoon',
+    hour >= 19 & hour <= 23  ~ 'evening',
+    hour <= 3 ~ 'evening')
+    )
+
+# Adding low, high, in_range labels
+
+diabetes_full <-
+  diabetes_full %>%
+  mutate(range = case_when(
+    blood_sugar < 4 ~ 'low',
+    blood_sugar >= 4 & blood_sugar < 11 ~ 'in_range',
+    blood_sugar >= 11 ~ 'high')
+  )
+
+# Turning NA into 0
+# First copying original df since I might want a non 0 version
+diabetes_full_zero <- diabetes_full
+diabetes_full_zero[is.na(diabetes_full_zero)] <- 0
+
+# One Hot Encoding of time_of_day
+diabetes_full <-
+  diabetes_full %>%
+  mutate(time_of_day_coded = case_when(
+    time_of_day == 'morning' ~ 1,
+    time_of_day == 'afternoon' ~ 2,
+    time_of_day == 'evening' ~ 3)
+    )
+
+# One Hot Encoding range
+
+diabetes_full <-
+  diabetes_full %>%
+  mutate(range_coded = case_when(
+    range == 'low' ~ 1,
+    range == 'in_range' ~ 2,
+    range == 'high' ~ 3)
+  )
+
+# Bolus with and without carbs
+diabetes_full <-
+  diabetes_full %>%
+  mutate(insulin_food = case_when(
+    carbs == 0 & bolus_volume > 0 ~ 1,
+    carbs > 0 & bolus_volume > 0 ~ 2,
+    carbs > 0 & bolus_volume == 0 ~ 3  
+  ))
+
+meals_per_day <-s
+  diabetes_full %>%
+  group_by(year,month,day) %>% 
+  filter(carbs != 0) %>% 
+  summarise(meals_day = sum(!is.na(carbs)))
+
+# Writing and saving data
+write_csv(diabetes_full, "inputs/data/13_diabetes-full.csv")
+
+
+# Simple Plotting 2 
+test2 <- diabetes_full %>%
+  #filter(time_of_day == 'morning') %>%
+  ggplot(aes(x = carbs, y = bolus_volume)) +
+  geom_point() +
+  #facet_wrap(~ time_of_day) +
+  facet_grid(~ month)
+
+show(test2)
+
+test2 + facet_grid(rows = vars(time_of_day))
