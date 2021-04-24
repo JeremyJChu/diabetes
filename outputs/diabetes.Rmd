@@ -1,14 +1,15 @@
 ---
-title: "Diabetes Case Study. Title to be decided for at the end. "
+title: "Working with Data about an Individual Type 1 Diabetic - Failing to Fit Linear Models and Lessons Learned"
 author: "Jeremy Chu"
-date: "09/04/2021"
+date: "21/04/2021"
 classoption: table
 output: bookdown::pdf_document2
 header-includes: 
   \usepackage{float}
   \usepackage{colortbl} 
   \arrayrulecolor{white}
-abstract: "As the paper is in progress, not much can be written about the abstract. Note that this abstract was written after the first introduction was written and after the final blub. It reflects my second introduction instead. Originally I was planning on predicting blood sugar levels based on carb intake and insulin intake but with the way the data is structured I was getting completely opposite correlations. I am currently reworking my data to focus more on time and overnight sleep blood sugar levels when insulin intake and carb intake does not play a factor. What you see in the dicussion/statistical modelling section were my attempts at figuring out just what's going on and how I arrived at my conclusion. Any and all feedback is welcome!"
+  \usepackage{pdfpages}
+abstract: "Through looking at type 1 diabetes data collected on an individual through a duration of 9 months, this study attempts to examine the factors attributed to the overnight fluctuations in an insulin-dependent diabetic's blood sugar levels, while illustrating the difficulties encountered in fitting a regression model to the available data. Through a variation of linear and logistic regressions, the study found that the individual blood sugar levels consistently rise overnight regardless of carb and insulin intake, potentially owing to either uncontrolled diabetes management or the dawn phenomenon. While the study aims to provide results that are more applicable towards a personal objective, there is hope that the success and failures of the regression models used here will help inform further type 1 diabetes research and offer a comprehensive individual dataset for additional research on how blood sugar levels fluctuate at night, and how food and insulin intake plays a part."
 bibliography: references.bib
 fontsize: 11pt
 mainfont: Calibri
@@ -41,10 +42,15 @@ library(oddsratio)
 library(ggiraph)
 library(ggiraphExtra)
 library(jtools)
+library(performance)
+library(see)
+library(qqplotr)
+library(wesanderson)
 ```
 
 ```{r read-data, include=FALSE}
 diabetes_full <- read_csv(here::here("inputs","data","13_diabetes-full.csv"))
+sleep_data_cleaned <- read_csv(here::here("inputs","data","14_sleep-data_cleaned.csv"))
 ```
 
 ```{r data-creation, include=FALSE}
@@ -68,44 +74,29 @@ meals_per_day <-
 
 # Introduction
 
-Diabetes research is centered around two fields: Studying the factors leading to diabetes, and finding critical factors that impact the lives of diabetics. When approaching the latter topic, available research has been sparse and scattered, with some examining the relationships between meal frequency and meal timings with blood sugar levels (missing citation), and others comparing ECGs with CGMs to discover some previously unknown correlations. Data on the lives of diabetics is sparse, and even when institutions generously make their data public, the time period of data collection is often quite short (cite the open diabetics data github). Borrowing the foundational research questions laid upon by previous diabetes researchers, this project looks at a single case for an extended period of time. Rather than comparing the diabetic experience of multiple individuals for a few weeks, I instead opted to examine 1 individual for 9 months. 
+Diabetes research is primarily centered around two fields: Studying the factors leading to diabetes, and finding critical factors that impact the lives of diabetic people. When approaching the latter topic, available research has been sparse and scattered, with some examining the relationships between meal frequency and meal timings with blood sugar levels [@citeMealFreq], and others comparing electrocardiograms (ECG/EKG) with continuous glucose monitors (CGM) to discover some previously unknown correlations [@citeD1NAMO]. Data on the lives of diabetics is sparse, and even when institutions generously make their data public, the time period of data collection is often quite short.^[The GitHub repository containing a collection of diabetes studies and open datasets can be found here: https://github.com/irinagain/Awesome-CGM/] Borrowing the foundational research questions laid upon by previous diabetes researchers, this project looks at a single case for an extended period of time. Rather than comparing the diabetic experience of multiple individuals for a few weeks, I instead opted to examine 1 individual for 9 months. Please note that the individual is a type 1 diabetic, and therefore the data and results should only be taken in relevance to insulin-dependent diabetics, and should not be associated with the experiences of type 2 diabetics. 
 
-The individual in question is my fiancée, which makes the topic of consent much easier than otherwise. The aim of the project is two-fold. First and foremost, this is a project designed to derive value for my fiancée, hence the questions will be seeking answers practical in nature. Secondly, I hope to be able to contribute to other available research, and see how a more extended observation period compares to a shorter but wider scope. The project aims to address three key questions:
+The individual in question is my fiancée, which makes the topic of consent much simpler than otherwise would be. The aim of the project is two-fold. First and foremost, this is a project designed to derive value for my fiancée, hence the questions will be seeking answers practical in nature. Secondly, I hope to be able to contribute to other available research; to see how a more extended observation period compares to a shorter but wider scope. The project aims to address three key questions: 
 
-1.	Does my fiancee’s blood sugar level follow a pattern of time of day 
-2.	What is the relationship between bolus intake versus carb intake
-3.	Do meal frequencies affect daily bolus intake volumes
-
-By examining the data and testing for the correlations between the available parameters, I attempt to better illustrate how my fiancee’s blood sugar level fluctuates on a day-to-day basis. Aiding the answering of these questions, regression models will be ran to predict:
-
-1.	Predict bolus volume based on carb intake, time of day, basal amount
-2.	Predict carb intake based on hour of the day
-3.	Predict blood sugar levels based on carb intake, time of day, basal amount
-4.	Predict blood sugar levels when sleeping (no carb intake) and look at the morning value
-
-The goal here is to functionally help my fiancée better control her A1C levels by predicting whether she needs to correct for more insulin intake depending on the time of day and carbs consumed. In addition, predicting blood sugar levels based on carb intake, while a very simple regression that cannot draw conclusive evidence due to many other variables in a meal’s nutritional value, can serve as a simple baseline for insulin intake. Moreover, an understanding on blood sugar levels based on meal timing, and blood sugar levels overnight, connects my research to a wider discourse and ties back into *Insert Study Name Here*’s study especially. Ultimately, the goal is to personally derive value from this study, while at the same time offering the research community a unique set of findings alongside a long and extensive dataset to build upon. 
-
-# Intro - Revised
-
-*Note that this introduction above is what I was aiming to do. With the results of my model now run it is looking quite impossible. Instead a better, revised introduction would be something like the blurb below. I am keeping the first introduction in case someone has feedback on how to approach my original idea, but I have currently pivoted my project to the direction outlined below*
-
-Diabetes research is centered around two fields: Studying the factors leading to diabetes, and finding critical factors that impact the lives of diabetics. When approaching the latter topic, available research has been sparse and scattered, with some examining the relationships between meal frequency and meal timings with blood sugar levels (missing citation), and others comparing ECGs with CGMs to discover some previously unknown correlations. Data on the lives of diabetics is sparse, and even when institutions generously make their data public, the time period of data collection is often quite short (cite the open diabetics data github). Borrowing the foundational research questions laid upon by previous diabetes researchers, this project looks at a single case for an extended period of time. Rather than comparing the diabetic experience of multiple individuals for a few weeks, I instead opted to examine 1 individual for 9 months. 
-
-The individual in question is my fiancée, which makes the topic of consent much easier than otherwise. The aim of the project is two-fold. First and foremost, this is a project designed to derive value for my fiancée, hence the questions will be seeking answers practical in nature. Secondly, I hope to be able to contribute to other available research, and see how a more extended observation period compares to a shorter but wider scope. The project aims to address three key questions: 
-
-1. Does my fiancee's blood sugar level follow a pattern of time of day
+1. Does the individual's blood sugar level follow a pattern of time of day
 2. Does eating before sleep influence whether she wakes up with a high/in range/low blood sugar
 3. Does taking insulin right before bed influence whether she wakes up with a high/in range/low blood sugar
 
-The questions are structured around time rather than insulin and carb intake throughout the day due to the limitations of the data. As will be further detailed in the data source section, the data used for analysis is aggregated by hour, where insulin intake numbers increase when blood sugar level rises. This results in unfortunate regression lines where it gives off the illusion that the more insulin the subject takes, the higher her blood sugar. The project will therefore first go over and illustrate why the data is unfeasible to perform predicitions on daytime blood sugar levels before analyzing the overnight changes of blood sugar in the subject. 
+The questions are structured around time rather than insulin and carb intake throughout the day due to the limitations of the data. As will be further detailed in the data source section, the data used for analysis is aggregated by hour, where insulin intake numbers increase when blood sugar level rises. This results in unfortunate regression lines where it gives off the illusion that the more insulin the individual takes, the higher her blood sugar. The project will therefore first go over and illustrate why the data is unfeasible to perform predictions on daytime blood sugar levels before analyzing the overnight changes of blood sugar in the subject. 
 
-One of the primary worries for diabetics is waking up in the middle of the night with a low blood sugar, or waking up and realizing that they spent the night with a high blood sugar and start off the day groggy and tired. Rather than focusing my efforts on predicting carb to insulin ratios, where the now present CGM and insulin pump combinations already do with their in-builit algorithms, this project aims to dissect what happens when the subject sleeps, and hopes to offer better insight into what to do to wake up in range. An understanding on the nightly shifts of blood sugar levels would, connect my research to a wider discourse and tie back into *Insert Study Name Here*’s study especially. Ultimately, the goal is to personally derive value from this study, while at the same time offering the research community a unique set of findings alongside a long and extensive dataset to build upon. All files associate with this project can be found on GitHub.^[GitHub repository for study: https://github.com/JeremyJChu/diabetes]
+One of the primary concerns for diabetic people is waking up in the middle of the night with a low blood sugar due to having too much insulin in them before bed, or waking up and realizing that they spent the night with a high blood sugar, resulting in having to start off the day groggy and tired due to something called the dawn phenomenon [@citeDawnP].^[The dawn phenomenon implies the increase in blood sugar levels overnight, it is still under research] Rather than focusing my efforts on predicting carb to insulin ratios, where the now present CGM and insulin pump combinations are already able to assist with their in-builit algorithms, this project aims to dissect what happens when the subject sleeps, and hopes to offer better insight into what to do to wake up in range. An understanding of the individual's nightly shifts of blood sugar levels would ideally connect my research to a wider discourse and tie back into studies dedicated to researching ways to manage the dawn phenomenon [@citeDawnP; @citeDawnP2]. Ultimately, the goal is to personally derive value from this study, while at the same time offering the research community a unique set of findings alongside a long and extensive dataset to build upon. All files associated with this project can be found on GitHub.^[GitHub repository for study: https://github.com/JeremyJChu/diabetes]
+
+The paper will be structured as followed: the Data Source section will provide a brief rundown on data collection along with data transformation results. Sections Diabetes Terminology and About the Individual (Ethics) will further supplement the necessary background information about the project before going forward in terms of medical terminology and the level of consent for the data. The Looking at the Individual's Performance section will give an overview on the individual's blood sugar level across the time span of the project, illustrating that the project is working with an uncontrolled diabetic's data. Following that, the Models and Results section will first detail why the data is unable to support predicting blood sugar levels from carb and insulin intake, before moving on to logistic and linear regression models performed on data that specifically targets when the individual is asleep. This section will also explain why the models ultimately are not a good fit. Due to the nature of only working with one person's data, the Discussion section will explain why causality cannot be determined from this dataset along with other limitations in terms of conclusiveness and representability of the project. Despite this, I have opted to include a Moving Forward section at the end, discussing the opportunities in which other researchers could take this study and its data forward, especially in investigating managing the dawn phenomnon in people with uncontrolled diabetes. 
+
+# Methods 
+
+All of the analysis was done using R [@citeR]. Reproducible file paths utilized the here package [@citeHere], and data cleaning/transformation was done with tidyverse [@citeTidy]. All graphs were plot and arranged using a combination of ggplot2, gridExtra, and gghighlight [@citeGgplot2; @citeGridExtra; @citeGghighlight]. Tables were created using knitr::kable [@citeKnitr] and kableExtra [@citeKableExtra]. The creation of the final product was aided with ggpubr, knitr, bookdown and magick [@citeGgpubr; @citeKnitr; @citeBookdown; @citeMagick]. Regression diagnosis was performed using the performance package [@citePerformance].
 
 # Data Source
 
-The data for this project comes from my fiancee’s (name omitted for privacy’s sake) Dexcom Continuous Glucose Monitor (CGM). A CGM is a device that tracks glucose levels 24/7, providing constant updates for the individual’s glucose levels, allowing for better diabetes management [@citeDexcomCGM]. It also has an additional function of saving the data and allowing it to be extracted for further analysis. By connecting the CGM to a computer, individuals are able to download data on their glucose level readings, when they took insulin, when they had carbs etc. For the purposes of this project, I simply took that data, scrubbed it to ensure privacy, and cleaned it for use. The original datasets contained the fields shown in tables \@ref(tab:tandem-table) and \@ref(tab:cgm-table), and the cleaned version can be seen in table \@ref(tab:diabetes-table). 
+The data for this project comes from my fiancee’s (name omitted for privacy’s sake) Dexcom Continuous Glucose Monitor (CGM). A CGM is a device that tracks glucose levels 24/7, providing constant updates to the individual's phone and insulin pump, allowing for better diabetes management [@citeDexcomCGM]. It also has an additional function of saving the data and allowing it to be extracted for further analysis. By connecting the CGM and insulin pump to a computer, individuals are able to download data on their glucose level readings, when they took insulin, when they had carbs etc. For the purposes of this project, I simply took that data, scrubbed it to ensure privacy, and cleaned it for use. The original datasets contained the fields shown in tables \@ref(tab:tandem-table) and \@ref(tab:cgm-table), and the cleaned version can be seen in tables \@ref(tab:diabetes-table) and \@ref(tab:sleep-table). A comprehensive datasource datasheet can be found in the [appendix](#datasource-datasheet).
 
-```{r table-1-2-3-creation}
+```{r table-1-2-3-4-creation}
 tandem_table <- tibble(
   "Field Name" = c("Time", "Basal Amount", "Bolus Type", "Bolus Volume", "Immediate Volume", "Extended Volume", "Duration", "Carbs", "Total Daily Dose", "Total Daily Basal", "Serial Number"),
   "Description" = c('Time data was logged', 'Amount of basal taken at the time of data log', 'Whether bolus was fast-acting or normal', 'Amount of bolus taken at the time of data log', "A setting on the pump where insulin can be quickly administered with a button press", "Type of bolus taken where users can take some insulin up front and have the rest admimnistered later", "No data", "Carbs taken at the time of data log", "Summation of total daily bolus taken", "Summation of total daily basal", "Serial number of device")
@@ -117,8 +108,13 @@ cgm_table <- tibble(
 )
 
 diabetes_table <- tibble(
-  "Field Name" = c("Year", "Month", "Day", "Hour", "Blood Sugar", "Basal Amount", "Bolus Volume", "Carbs", "Time of Day", "Time of Day Coded", "Range", "Range Coded", "Insulin Food"),
-  "Description" = c("Year data was logged", "Month data was logged", "Day of the month data was logged (1-31)", "Hour of day data was logged (0-23)", "Average hourly blood sugar level at the hour of data log", "Total hourly basal taken at the hour of data log", "Total hourly bolus amount taken at the hour of data log", "Total hourly carbs taken at the hour of data log", "Morning, afternoon, or evening based on the hour", "Time of day coded into 1, 2, 3", "What the range of blood sugar is for the hour (low, in range, high)", "Range coded into 1,2,3", "Whether bolus taken was with food or not (1: No carbs, Yes insulin, 2: Yes carbs, Yes insulin, 3: Yes carbs, No insulin)")
+  "Field Name" = c("Year", "Month", "Day", "Hour", "Blood Sugar", "Basal Amount", "Bolus Volume", "Carbs", "Time of Day", "Time of Day Coded", "Range", "Range Coded", "Insulin Food", "Sleep"),
+  "Description" = c("Year data was logged", "Month data was logged", "Day of the month data was logged (1-31)", "Hour of day data was logged (0-23)", "Average hourly blood sugar level at the hour of data log", "Total hourly basal taken at the hour of data log", "Total hourly bolus amount taken at the hour of data log", "Total hourly carbs taken at the hour of data log", "Morning, afternoon, or evening based on the hour", "Time of day coded into 1, 2, 3", "What the range of blood sugar is for the hour (low, in range, high)", "Range coded into 1,2,3", "Whether bolus taken was with food or not (1: No carbs, Yes insulin, 2: Yes carbs, Yes insulin, 3: Yes carbs, No insulin)", "Whether the individual is asleep")
+)
+
+sleep_table <- tibble(
+  "Field Name" = c("Year", "Month", "Day", "Bed Food", "Bed Carbs", "Wakeup Range", "Night Insulin", "Any Insulin"),
+  "Description" = c("Year data was logged", "Month data was logged", "Day of the month data was logged (1-31)", "Did the individual consume food during the hours of 0-7", "How many carbs did the individual consume between the hours of 0-7", "What is the range of the individual at 7am (0: in range, 1: high, 2: low)", "How much insulin (bolus) did the individual take between the hours of 0-7", "Did the individual take any insulin at night (0: No, 1: Yes)")
 )
 ```
 
@@ -149,8 +145,19 @@ knitr::kable(diabetes_table, escape = F,
       caption = "Cleaned CGM Data") %>%
   row_spec(0,bold=TRUE) %>% # Bold Column names, Row 0 = first row
   kable_styling(full_width = F, latex_options = "scale_down") %>%
-  add_footnote("1 of 1 cleaned and coded datasets")
+  add_footnote("1 of 2 cleaned and coded datasets")
 ```
+
+```{r sleep-table, results = "asis", fig.pos="H", out.width = '70%'}
+knitr::kable(sleep_table, escape = F,
+      col.names = c("Field Name","Description"),
+      align = "ll",
+      caption = "Cleaned CGM Data") %>%
+  row_spec(0,bold=TRUE) %>% # Bold Column names, Row 0 = first row
+  kable_styling(full_width = F, latex_options = "scale_down") %>%
+  add_footnote("2 of 2 cleaned and coded datasets")
+```
+
 
 # Diabetes Terminology 
 
@@ -158,39 +165,45 @@ For readers unfamiliar with diabetes, as the project revolves around medical dat
 
 **Type 1 and Type 2 Diabetes** 
 
-The two types of diabetes. While the risk factors of type 2 diabetes is mainly attributed to lifestyle and age, those behind type 1 are less cle   ar. They are usually associated with genetics and family history rather than more controllable factors. Causes for type 1 and type 2 also differ. Type 1 is an autoimmune disease where the pancreas is unable to make enough insulin whereas type 2 is the body being resistant to insulin [@citeDiabetesCare].
+The two major types of diabetes. Type 1 diabetes' risk factors are associated with genetics and family history. It is an autoimmune disease where the pancreas is unable to produce sufficient insulin, thus resulting in patients being insulin dependent. It is a lifelong insulin dependency that cannot be cured or reversed.
+
+Meanwhile, the risk factors for type 2 diabetes are mainly attributed to lifestyle to age, more controllable factors. It is a situation where the patient's body becomes resistant to insulin. Unlike type 1, type 2 diabetes is potentially reversible through a rigorously controlled diet and exercise. [@citeDiabetesCare].
 
 **A1c** 
 
-Throughout this paper the term A1c will be mentioned sporadically. A1c, also referred to as hemoglobinA1c or glycated hemoglobin, is simply just a test that measures the 2-3 month average of glucose in blood [@citeA1c]. In other words, it is a measure of how managed individual diabetics are. If they are usually in range, their A1c levels will reflect that, if they are uncontrolled, then likewise the A1c will return higher averages. 
+Throughout this paper the term A1c will be mentioned sporadically. A1c, also referred to as hemoglobinA1c or glycated hemoglobin, is a blood test that measures the 2-3 month average of glucose in blood [@citeA1c]. In other words, it is a measure of how managed individual diabetics are. If they are usually in range, their A1c levels will reflect that, if they are uncontrolled, then likewise the A1c will return higher averages. 
 
 **Blood Sugar/Glucose Levels**
 
-Blood sugar or glucose levels is simply the amount of sugar in a person’s blood. For the purposes of this project, these values will be represented in mmol/L (millimoles per litre), the UK standard. In the US and continental Europe, the values would instead be represented in mg/dL (milligrams per decilitre). While the calculations differ slightly between the two, they perform the same function in measuring blood glucose concentration [@citeBloodsugar]. Once blood glucose levels fall or rise above a certain range, the individual can be labelled as currently having a low/high blood sugar. Low blood sugars can result in a loss of consciousness with a risk of death whereas high blood sugars for prolonged periods of time can result in a host of health complications. 
+Blood sugar or glucose levels is simply the amount of sugar in a person’s blood. For the purposes of this project, these values will be represented in mmol/L (millimoles per litre), the UK standard. In the US and continental Europe, the values would instead be represented in mg/dL (milligrams per decilitre). While the calculations differ slightly between the two, they perform the same function in measuring blood glucose concentration [@citeBloodsugar]. Once blood glucose levels fall or rise above a certain range, the individual can be labelled as currently having a low/high blood sugar. Low blood sugars can result in a loss of consciousness with a risk of death whereas high blood sugars for prolonged periods of time will eventually result in a host of health complications. 
 
 The general target range usually classifies less than 4 mmol/L as a low blood sugar, and higher than 11 as a high blood sugar. The dataset used in this project will reflect this range. 
 
 **Continuous Glucose Monitor (CGM) and Insulin Pump**
 
-The data comes from the Dexcom G6 Continuous Glucose Monitor System... To be filled in.
+The data comes from the Dexcom G6 Continuous Glucose Monitor System, linked to the Tandem t:slim X2 insulin pump [@citeDexcomCGM; @citeTandem]. The Dexcom CGM is essentially a transmitter that continuously monitors an individual's blood sugar levels and reports the data onto the device's display screen. When connected to the Tandem insulin pump, the user has the option to choose between Control-IQ Technology and Basal-IQ Technology. In relation to this project, the data is collected while the individual was using Basal-IQ technology. In a nutshell, Basal-IQ connects with the Dexcom CGM to predict blood sugar levels 30 minutes in advance and stops insulin delivery if the user is expected to drop below a certain threshold.^[For more information please visit the Tandem website: https://www.tandemdiabetes.com/en-ca/products/t-slim-x2-insulin-pump/basal-iq] 
 
-**Basal**
+**Basal and Bolus**
 
-To be filled in
-
-**Bolus**
-
-To be filled in
-
-# About the Individual
-
-A brief explanation on the circumstances surrounding the individual used for this case study. This does not impact the research done in this paper, but is rather used to provide further context for additional research down the line. 
-
-The individual is a female aged between 20-30, ethnically Indian, and a type 1 diabetic. What differentiates her from typical type 1 diabetics is that she is a type 1 with insulin resistance. While previously uncommon, these cases are becoming more and more prevalent and as such so will the usefulness of this case study. Additionally, the individual was misdiagnosed with type 2 diabetes at age 19 before getting a correct diagnosis as a type 1 diabetic with insulin resistance at age 22. 
+During this project, two types of insulin will be referred to: Basal and Bolus. The differentiation is simple. Basal insulin refers to insulin that is released in the background at all times, regardless of carb consumption; bolus insulin refers to insulin released in response to food [@citeTypesofInsulin]. There are also different characteristics of insulin brands that will not be written in detail, simply note that for this individual, rapid-acting insulin is taken. Rapid-acting insulin takes around 15 minutes to reach to blood stream and will continue to work for up to 4 hours after intake.
 
 # Literature Review
 
-To be filled in 
+The main bodies of studies and literature that this project is founded upon is as follows:
+
+## Dawn Phenomenon and Overnight Control
+
+@citeDawnP discuss and summarizes over 30 years of dawn phenomenon research, and specifically references the different methods of treatment prescribed to type 1 and type 2 diabetics. The authors were able to quantify to magnitude of the dawn phenomenon, that of a 15-25 mg/dL blood sugar elevation for type 1 diabetics, and discuss the effectiveness of oral treatment and basal insulin in managing the phenomenon, ultimately concluding that it is a subject that remains an area of research interest today despite the amount of research done on the subject. @citeDawnP2 cover more of the diagnosis side of the dawn phenomenon, and discusses the development of a formula to "calculate the magnitude of early morning hyperglycemia without CGM." The authors further stress the importance of a more aggressive control over glucose to counteract dawn phenomenon. @citeOvernightStudy meanwhile looks at overnight glycermic control at a different angle, examining whether low blood sugars occur in children at night after afternoon exercise, ultimately finding that exercise in the afternoon does impact nightly blood sugar levels. 
+
+## Food and Blood Sugar Levels
+
+In relation to meal frequencies, @citeMealFreq looked at the impact of meal frequencies for type 2 diabetics that do not take insulin, ultimately concluding that consuming more smaller meals throughout the day led to less blood sugar fluctuations than if the subjects had eaten two large meals. @citeDietType2 look at the association between adherence to dietary recommendation and patients' fasting blood sugar levels. The study found statistical significance in how much carbs a meal has and the number of meals a day with patients' fasting blood sugar levels. Taking it in a different direction, @citeHall bring the investigation to healthy individuals. By using a CGM, the study monitors the impact of meals on the blood sugar levels of patients with no diabetes diagnosis, finding that individuals respond differently to different foods, but there are some foods that result in an elevation of blood sugar levels in the majority of adults. It is this study's hope to provide a type 1 diabetic window into the larger discourse, addressing situations where type 1 diabetics need to lose weight to reduce insulin resistance (The next section will elaborate why this is important). 
+
+# About the Individual (Ethics)
+
+A brief explanation on the circumstances surrounding the individual used for this case study. This does not impact the research done in this paper, but is rather used to provide further context for additional research down the line. 
+
+The individual is a female aged between 20-30, ethnically South Asian, and a type 1 diabetic. What differentiates her from a typical type 1 diabetic is that she is a type 1 with insulin resistance. While previously uncommon, these cases are becoming more and more prevalent and as such so will the usefulness of this case study. Additionally, the individual was misdiagnosed with type 2 diabetes at age 19 before getting a correct diagnosis of type 1 diabetes with insulin resistance at age 22. 
 
 # Looking at the individual's performance
 
@@ -200,7 +213,7 @@ Before I get any deeper into running models to analyze and predict my fiancee's 
 diabetes_overview <- diabetes_full %>%
   filter(!is.na(blood_sugar)) %>%
   ggplot(aes(x = hour, y = blood_sugar, color = range)) +
-  geom_point() +
+  geom_point(alpha = 0.3, position="jitter") +
   theme(panel.grid = element_blank(),
         axis.title = element_blank(),
         axis.ticks = element_blank(),
@@ -220,12 +233,12 @@ diabetes_overview <- diabetes_full %>%
 show(diabetes_overview)
 ```
 
-Almost consisently across all hours of the day, for 9 months, my fiancee has been in a state of high blood sugar than in range (See Figure \@ref(fig:diabetes-overview)). This suggests that the data reflects a situation in which the insulin she takes is insufficient to counteract both her natural blood sugar generation and the amount of carbs she eats. As the data itself is skewed, note that any prediction done will be reflective of insulin intake for an uncontrolled diabetic. It is not representative of diabetics in control of their blood sugar levels and the insulin intake presented in this project will undoubtedly be significantly higher if comapred to in control individuals. There will be more datapoints in which insulin is taken without carb consumption (See Figure \@ref(fig:bolus-carbs)) because of either insufficient insulin taken in the previous meal, or incorrect carb-insulin settings in the pump that failed to account for a need for increased insulin intake.
+Almost consisently, at all times,  the individual has been in a state of high blood sugar rather than in range (See Figure \@ref(fig:diabetes-overview)). This suggests that the data reflects a situation in which the insulin she takes is insufficient to counteract both her natural blood sugar generation and the amount of carbs she eats. As the data itself is skewed, note that any prediction done will be reflective of insulin intake for an uncontrolled diabetic. It is not representative of diabetics in control of their blood sugar levels and therefore the insulin intake presented in this project will undoubtedly be significantly higher if comapred to in control individuals. There will be more datapoints in which insulin is taken without carb consumption (See Figure \@ref(fig:bolus-carbs)) because of either insufficient insulin taken in the previous meal, or incorrect carb-insulin settings in the pump that failed to account for a need for increased insulin intake.
 
 ```{r figure-2-creation-bolus-carbs}
 bolus_carbs <- diabetes_full %>%
   ggplot(aes(x = carbs, y = bolus_volume, color = range)) +
-  geom_point() +
+  geom_point(alpha = 0.3, position = "jitter") +
   scale_colour_discrete(na.translate = F) +
   theme(panel.grid = element_blank(),
         axis.title = element_blank(),
@@ -279,7 +292,8 @@ diabetes_full$time_of_day <- factor(diabetes_full$time_of_day, levels = c("morni
 ```{r carb-day, echo=FALSE, warning=FALSE, fig.cap="The subject starts the day off in typically in range, then gets more lax before ending up with typically high blood sugar levels in the evening", fig.pos="H"}
 show(carb_day)
 ```
-For meal frequencies, the subject on average eats around 3-4 meals a day (See Figure \@ref(fig:meal-day)). Meals in this situation are defined as the consumption of carbs, so snacks are counted as 1 meal. A brief glance at WebMD suggests that the Recommended Daily Allowance is 130 grams of carbs per day (cite WebMD). A more in-depth look from the Centers for Disease Control and Prevention (CDC) reveals that ultimately there is no standard, but rather diabetics should aim to get half their calories from carbs (cite CDC). Since I know the subject personally, the doctor recommendation provided was 30 grams of carbs for breakfast, 45 grams of carbs each for lunch and dinner, and 30 grams of carbs for snacks throughout the day. This brings up the subject's daily allowance to up to 150 per day. With the exception of December 2019, the subject has mostly fallen within this range (See Table \@ref(tab:carb-month)). While the type of carbs consumed elicits varied reactions on blood sugar levels, the project will be progressing with the assumption that the subject is not overeating carbs and therefore leading to high spikes in blood sugar levels, but rather the reasoning for high blood sugar levels stem elsewhere. 
+
+For meal frequencies, the subject on average eats around 3-4 meals a day (See Figure \@ref(fig:meal-day)). Meals in this situation are defined as the consumption of carbs, so snacks are counted as 1 meal. A brief glance at WebMD suggests that the Recommended Daily Allowance is 130 grams of carbs per day [@citeWebMD]. A more in-depth look from the Centers for Disease Control and Prevention (CDC) reveals that ultimately there is no standard, but rather diabetics should aim to get half their calories from carbs [@citeCDC]. Since I know the subject personally, the doctor recommendation provided was 30 grams of carbs for breakfast, 45 grams of carbs each for lunch and dinner, and 30 grams of carbs for snacks throughout the day. This brings up the subject's daily allowance to up to 150 per day. With the exception of December 2019, the subject has mostly fallen within this range (See Table \@ref(tab:carb-month)). While the type of carbs consumed elicits varied reactions on blood sugar levels, the project will be progressing with the assumption that the subject is not overeating carbs and therefore leading to high spikes in blood sugar levels, but rather the reasoning for high blood sugar levels stem elsewhere. 
 
 ```{r table-creation-carb-month, include=FALSE}
 carb_month <- diabetes_full %>% group_by(year, month) %>% summarize(sum_carbs = sum(carbs, na.rm = TRUE))
@@ -324,14 +338,13 @@ meal_day <- meals_per_day %>%
 show(meal_day)
 ```
 
+# Model and Results
 
-# Model
+With all the factors outlined above, I decided to run a few statistical models on varying dependent variables. Initially, I wanted to evaluate and predict volume of insulin intake and blood sugar levels. Predicting insulin intake would allow for better adjustment of the tandem pump insulin settings and carb ratios, whereas predicting blood sugar levels could reveal possible patterns in blood sugar levels in relation to meal frequencies or time of day. 
 
-With all the factors outlined above, I decided to run a few statistical models on varying dependent variables. Mainly I wanted to evaluate and predict volume of insulin intake and blood sugar levels. Predicting insulin intake would allow for better adjustment of the tandem pump insulin settings and carb ratios, whereas predicting blood sugar levels could reveal possible patterns in blood sugar levels in relation to meal frequencies or time of day. 
+## Predicting Bolus Insulin Based on Carbs, Time of Day, and Basal
 
-## Predicting bolus volume based on carb intake, time of day, basal amount
-
-To start, I looked at whether carb intake, time of day, and basal amount had a correlation with how much insulin the subject took. Based on previous observations, it would be a natural assumption that insulin intake, that is bolus volume increases with the number of carbs consumed. The question is, would time of day also matter? As we were not shown otherwise during data exploration, my null hypothesis is no, time of day is not a significant factor correlated to how much insulin the subject takes. *Insert relationship between basal and bolus here. Insufficient research right now* Results in table \@ref(tab:model-1).
+To start, I looked at whether carb intake, time of day, and basal amount had a correlation with how much insulin the subject took. Based on previous observations, it would be a natural assumption that insulin intake, that is bolus volume increases with the number of carbs consumed. The question is, would time of day also matter? As we were not shown otherwise during data exploration, my null hypothesis is no, time of day is not a significant factor correlated to how much insulin the subject takes. Meanwhile, the relationship between basal and bolus is as expected. For each unit increase in basal, insulin intake decreases by 1. As the functionality of insulin remains the same regardless of type, it is expected that an increase in one will result in a decrease in another. Results in table \@ref(tab:model-1).
 
 ```{r model-1-creation}
 model1 <- lm(bolus_volume ~ carbs + time_of_day_coded + basal_amount, data = diabetes_full)
@@ -341,7 +354,15 @@ model1 <- lm(bolus_volume ~ carbs + time_of_day_coded + basal_amount, data = dia
 huxreg(model1)
 ```
 
-The results were as expected. Carb intake shows a positive, significant correlation with insulin intake (See figure \@ref(fig:regress-1)). Insulin intake should increase by 0.25 units per 1 extra gram of carbs consumed. *Insert blub about basal negative correlation here after research* 
+A linear regression was chosen based on the assumption of linearity between carb intake and bolus amount. Accordingly, there should be no surprises in which bolus intake decreases with an increase in carb consumption. Time of day was chosen more in relation to being an uncertain variable. In an ideal situation, time of day should have no linearity with blood sugar levels as a controlled diabetic would have a flat and stable curve, keeping their blood sugar levels within the acceptable range. However, given that the individual is not in control during the scope of this study, the inclusion of time of day becomes a more investigative choice. As for basal amount, there should be linearity present due to the idea that basal insulin is a constant supply of insulin that is periodically given to bring down "high resting blood glucose levels" [@citeBasalbolus]. With higher basal amount given in an hour, theoretically there should be less bolus injected. 
+
+To test for validity of a linear regression for these variables, I implemented the performance package to check for linearity and collinearity in particular [@citePerformance]. The diagnostics report can be seen in figure \@ref(fig:diag-1). 
+
+```{r diag-1, echo=FALSE, warning=FALSE, fig.cap="Diagnostics of linear regression", fig.pos="H", fig.height = 7.5}
+performance::check_model(model1)
+```
+
+The results were as expected. Carb intake shows a positive, significant correlation with insulin intake (See figure \@ref(fig:regress-1)). Insulin intake should increase by 0.25 units per 1 extra gram of carbs consumed. Similarly, insulin intake (bolus) decreases by 1 mmol/L for each unit of basal taken. However, the diagnostics are showing significant outliers in the data, something to keep in mind moving forward. 
 
 ```{r regress-1-graph-create, include=FALSE, message=FALSE}
 regress_1 <-
@@ -353,7 +374,7 @@ regress_1 <-
         #axis.title = element_blank(),
         axis.ticks = element_blank(),
         panel.background = element_blank(),
-        legend.position = "top",
+        legend.position = "none",
         legend.title = element_blank(),
         plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
         plot.caption = element_text(size = 6)
@@ -367,11 +388,11 @@ regress_1 <-
 ```{r regress-1, echo=FALSE, warning=FALSE, fig.cap="Positive correlation between carb intake and insulin intake", fig.pos="H"}
 show(regress_1)
 ```
+## A Dead End Model - Predicting Blood Sugar Levels
 
+Rather than insulin intake, which is a calculated measure that the insulin pump also calculates, a more valuable question is figuring out factors correlating with blood sugar levels. Table \@ref(tab:model-2) shows the results of a regression predicting blood sugar levels based on carb intake, time of day, bolus amount, and basal amount.
 
-Rather than insulin intake, which is a calculated measure that the insulim pump also calculates, a more valuable question is figuring out factors correlating with blood sugar levels. Table \@ref(tab:model-2) shows the results of a regression predicting blood sugar levels based on carb intake, time of day, bolus amount, and basal amount.
-
-```{r}
+```{r model-2-creation}
 model2 <- lm(blood_sugar ~ carbs + time_of_day_coded + basal_amount + bolus_volume, data = diabetes_full)
 ```
 
@@ -379,72 +400,355 @@ model2 <- lm(blood_sugar ~ carbs + time_of_day_coded + basal_amount + bolus_volu
 huxreg(model2)
 ```
 
-The results show significance across the board (Will be written into paragraph form later). 
+Despite all factors showing statistical significance, the results did not make sense. The data is showing a negative correlation with carbs, suggesting that for every 1g of carb eaten, the individual's blood sugar level would drop by 0.08 mmol/L, infringing on the very foundations of how blood sugar level operates. To make matters worse, the results also demonstrate a positive correlation with insulin intake. For unknown reasons, the individual blood sugar levels are hypothetically rising by 0.3 mmo/L per unit increase in insulin. Taking these results at face value, it would mean that the individual's blood sugar level decreases with carb consumption and increases with insulin intake. 
 
-- Negative correlation with carbs. Every 1g carb eaten, blood sugar drops 0.08 mmol/L. Weird. Why? 
+Running a diagnostics on the model shows that none of the assumptions apply. There is absolutely no linearity nor normality of residuals. The variance is not homogenous. There are major errors in using a linear model for data that should have linearity. The question is why does data that should normally show linearity result in such chaos. 
 
-- Positive correlation with time of day. Every time the time of day shifts from morning -> afternoon -> evening, blood sugar increases by 1.7 mmol/L. Sounds about right with the data 
-
-- Basal. TBD 
-
-- Positve correlation with insulin. Blood sugar rises 0.3 for every unit increase in insulin. Why? 
-
-Need to break this down further. Do I have too many variables? 
-
-Running more models
-
-```{r}
-model6 <- lm(blood_sugar ~ hour + bolus_volume + carbs, data = diabetes_full)
+```{r diag-2, echo=FALSE, warning=FALSE, fig.cap="Diagnostics of linear regression", fig.pos="H", fig.height = 7.5}
+performance::check_model(model2)
 ```
 
-```{r}
-huxreg(model6)
-```
-
-Still showing weird correlations. (Detailed writeup later) 
-
-- Hour positive correlation 
-
-- Insulin Positive (Weird). 
-
-- Carbs Negative (Weird) 
-
-Or is it weird. In actuality, the limits of the data actually influence this. As the data is cleaned in a way so that it aggregates by hour, what the data actually says is that for hour 1, the blood sugar is high (15) and so let's say (20) units of insulin is taken. Therefore it makes sense that the results reflect insulin usage rising in relation to blood sugar levels. This means I need to rethink my introduction at the end. Figure \@ref(fig:mess-1) shows what a mess it is. 
+Resolving this contradiction is simpler than it appears, and will explain why this paper must be cautions in working with the variables of insulin and carb intake. Figure \@ref(fig:mess-1) gives a window into the correlation between insulin intake and blood sugar levels. With no obvious relationship, it is clear why the regression results would not be reliable. Similarly, figure (\@ref(fig:mess-2)) details why carbs shows a negative correlation with blood sugar levels in the regression results. Ultimately, the non-linearity of the data triumps over the slight negative correlation that can be observed. 
 
 ```{r mess-1-creation}
 mess_1 <-
   diabetes_full %>%
-  ggplot(aes(x = bolus_volume, y = blood_sugar)) +
-  geom_point()
+  ggplot(aes(x = bolus_volume, y = blood_sugar, color = blood_sugar)) +
+  geom_point() +
+  theme(panel.grid = element_blank(),
+        #axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 6)
+  ) +
+  labs(x = "Insulin intake (mmol/L)",
+       y = "Blood Sugar Levels",
+       title = "Examining the relationship between insulin intake and blood sugar levels",
+       caption ="Source: Dexcom CGM")
 ```
 
-```{r mess-1, echo=FALSE, warning=FALSE, fig.cap="Mess 1", fig.pos="H"}
+```{r mess-1, echo=FALSE, warning=FALSE, fig.cap="The non-linear relationship between insulin intake and blood sugar levels", fig.pos="H", out.width = '70%'}
 show(mess_1)
 ```
-
-For carbs. I need to figure out why carbs has a negative correlation. It's saying that for each additional gram of carb consumed, blood sugar level drops. Plotting out figure (\@ref(fig:mess-2)) shows a similarly mess of a relationship.  
 
 ```{r mess-2-creation}
 mess_2 <-
   diabetes_full %>%
-  ggplot(aes(x = carbs, y = blood_sugar)) +
-  geom_point()
+  ggplot(aes(x = carbs, y = blood_sugar, color = blood_sugar)) +
+  geom_point() +
+  theme(panel.grid = element_blank(),
+        #axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 6)
+  ) +
+  labs(x = "Carbs intake (g)",
+       y = "Blood Sugar Levels",
+       title = "Examining the relationship between carbs intake and blood sugar levels",
+       caption ="Source: Dexcom CGM")
 ```
 
-```{r mess-2, echo=FALSE, warning=FALSE, fig.cap="Mess 2", fig.pos="H"}
+```{r mess-2, echo=FALSE, warning=FALSE, fig.cap="Non-linearity with slight negative correlation between carb intake and blood sugar levels", fig.pos="H", out.width = '70%'}
 show(mess_2)
 ```
 
-So my plan is to rework the analysis and modelling a bit so to show the limits of my data, and basically focus more on the time aspect of the data. Based on how the datasets are I don't know if it's possible to be able to predict what the blood sugar level will be in like say 4 hours down the line after taking insulin. I could maybe filter out the data for let's say sleep time only, where I know 100% there's no food consumption and then run the regression there. That way I will be able to restructure my analysis to instead show maybe like "Did the subject eat food X hours before sleep" and then "Did the subject wake up with her blood sugar in range". 
+The problem is figuring out why, and it turns out to be more straightforward than expected. It all comes back to the limits of the data. The data is collected in a manner where the CGM logs the user's current blood sugar level and saves that data to a time and date. Typically, best practice is to take insulin before eating food. So for example when the individual eats lunch, in this specific case study the probability of her blood sugar level being high is the greatest, she first logs how much carbs she is going to eat, and then administers the corresponding required amount of insulin. This means a generally higher blood sugar level is recorded when insulin is taken. All that data is logged before the meal is actually consumed. That insulin then works in her body for up to 4 hours. To further complicate the data, because insulin and carb intake are minority events throughout the day, the original dataset has countless null values where there is time and blood sugar level data, but not insulin and/or carb intake data. As such the data had to be cleaned in a way that it aggregated by hour. Therefore in the cleaned dataset it is natural for the association between the average hourly blood sugar level and combined hourly insulin intake to be positive, and for carbs to be strangely correlated with blood sugar levels. Ultimately, there are more occurrences, on average, for an uncontrolled diabetic in which insulin is taken in response to high blood sugar levels. In addition, the factors associated with food consumption and insulin intake are simply too numerous for an hourly aggregation to properly encapsulate. It is therefore unfortunate but expected that a simple linear regression would result in predictions that defy reality. 
 
-## Causality
+## Bedtime
 
-To be filled in. Maybe a DAG? Not sure if I can even speak to causality but will address that if so. 
+With that said, this is why it is impossible for this project to proceed in the direction of predicting blood sugar levels in the day based on insulin and carb intake. The data simply cannot support this line of investigation. Therefore, I instead opted to investigate the period of time in which there would be no, or at least be minimal carb and insulin intake - bedtime. I mention minimal because there are outlier situations in which the individual wakes up in the middle of the night with a low blood sugar and would have to subsequently rapidly consume a large amount of carbs. She then would have to take a careful amount of insulin to counteract the sudden intake of carbs while making sure she does not drop to a low again. For the most part, this study will ignore these outlier situations, instead focusing on the typical nights in which she sleeps through the night. 
+
+To do so, I turn to the second cleaned dataset (See table \@ref(tab:sleep-table)). The idea is to see what factors influence overnight blood sugar levels and allow for the individual to wake up in range. Setting the null hypothesis as eating at night or taking insulin at night does not influence the individual's blood sugar level, this is under the assumption that the insulin taken counteracts the carbs, I ran a logistic regression with whether the morning blood sugar level was in range (0) or high (1) as the dependent variable. Low was not an option simply because in the 9 months of data available, the individual has not woken up with a low. Note that this does not mean she did not have a low at night, but rather she did not wake up with a low at 7am. Table \@ref(tab:sleep-logit-table) shows the results. 
+
+```{r prep-logit-1}
+wakeup_inrange <- glm(wakeup_range ~ bed_food + any_insulin, data = sleep_data_cleaned, family = "binomial")
+wakeup_inrange_table <- data.frame(summary(wakeup_inrange)$coef)
+rownames(wakeup_inrange_table) <- c('Intercept','Ate food at night','Took insulin at night')
+wakeup_inrange_table$Estimate <- signif(wakeup_inrange_table$Estimate, 2)
+wakeup_inrange_table$Std..Error <- signif(wakeup_inrange_table$Std..Error, 2)
+wakeup_inrange_table$z.value <- signif(wakeup_inrange_table$z.value, 2)
+wakeup_inrange_table$Pr...z.. <- signif(wakeup_inrange_table$Pr...z.., 2)
+```
+
+```{r sleep-logit-table, fig.pos = "H", out.width = '70%'}
+knitr::kable(wakeup_inrange_table, escape = F,
+             col.names = c("Estimate","Std Error","z value","p-value"),
+             caption = 'Logistic Regression for Whether Food/Insulin Intake Correlates with Waking Up In Range') %>%
+  row_spec(0,bold=TRUE) %>%
+  kable_styling(full_width = F, latex_options = "hold_position") %>%
+  footnote(c("DV: Wake up with blood sugar in range/high",
+                 "IV: Ate/Did not eat food at night",
+                 "IV: Took/Did not take insulin at night"))
+```
+
+To begin with, there was no significance in the results, at least in terms of p-value. The independent variables, "ate food at night" and "took insulin at night" were binary coded with 0 and 1. 0 implies a negative result, while 1 implies positive. Both eating food at night and taking insulin at night show higher log odds for waking up with a high than if the individual did not eat food or take insulin at night. But honestly, the data does not leave much for interpretation. Much like with previous attempts, the extent of what can be concluded is that there is a better hypothesis than simply looking at the interaction between eating food and taking insulin at night and the corresponding blood sugar level in the morning the next day. 
+
+A diagnostic on the model (see figure \@ref(fig:diag-wakeup-inrange)) indicates the presence of significant outliers. Their presence is not surprising considering that the data of an uncontrolled diabetic is filled with outliers. The act of taking insulin without eating carbs has led to incredibly strange plots as outlined in previous sections. Even then, however, the act of taking correctional insulin exists, in which the individual takes small amounts of insulin to correct for the natural release of blood sugar in the body. 
+
+```{r diag-wakeup-inrange, echo=FALSE, warning=FALSE, fig.cap="Diagnostics of linear regression", fig.pos="H", fig.height = 7.5}
+performance::check_model(wakeup_inrange)
+```
+
+## Splitting into Two Groups
+
+As a final experiment, I split the sleep data into 2 groups. Group 1 accounts for nights where the individual took insulin after eating food, this includes situations in which she partakes in late night snacks or is required to consume additional carbs to prevent predicted low blood sugars. Group 2 covers nights in which the individual took insulin despite a lack of carb consumption, accounting for scenarios in which she has to take correctional insulin before bed due to an already high blood sugar level.
+
+A brief glance at the outcomes of this split is shown in figure \@ref(fig:withwithout-food-figure). For the duration of the study, in scenarios where the individual ate food and took insulin at night, the individual woke up in range 66% of mornings. In comparison, in nights where the individual took insulin without food, the individual woke up in range for 72% of mornings. 
+
+After running a multiple regression on both groups, I finally noticed some difference. For both regressions I chose the individual's morning blood sugar level as the dependent variable. The goal was to test for factors leading up to the individual waking up with her blood sugar in range. For independent variables, I firstly chose her blood sugar levels at midnight to see if there was any correlation between both time periods regardless of other factors. Additionally, I chose the amount of insulin the individual took during midnight to 7am as the second dependent variable. The assumption is that for the group where the individual took insulin without eating food, the more insulin the individual took, the lower her blood sugar levels at 7am would be. For the group in which she both ate food and took insulin, the relationship would be less clear as a lot more confounding factors would be present. Simply the act of taking insufficient insulin for her nightly carb consumption would affect the results. 
+
+```{r withwithoutfood-split}
+insulin_nofood <- sleep_data_cleaned %>% filter(any_insulin == 1 & bed_food == 0)
+insulin_withfood <- sleep_data_cleaned %>% filter(any_insulin == 1 & bed_food == 1)
+```
+
+```{r withwithoutfood-outcome-create}
+withfood_outcome <- insulin_withfood %>% 
+  ggplot(aes(x = factor(wakeup_range), fill = factor(wakeup_range))) +
+  geom_bar() +
+  geom_text(aes(label=..count..), stat = "count", position=position_dodge(width=0.9), vjust=-0.5) +
+  scale_x_discrete(labels=c("0" = "High", "1" = "In Range")) +
+  scale_fill_manual(values=c("#F8766D","#00BA36")) +
+  theme(panel.grid = element_blank(),
+        #axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 6)
+  ) +
+  labs(x = "In Range or No",
+       y = "Number of days",
+       title = "Blood Sugar Levels with Food",
+       caption ="Source: Dexcom CGM")
+
+withoutfood_outcome <- insulin_nofood %>% 
+  ggplot(aes(x = factor(wakeup_range), fill = factor(wakeup_range))) +
+  geom_bar() +
+  geom_text(aes(label=..count..), stat = "count", position=position_dodge(width=0.9), vjust=-0.5) +
+  scale_x_discrete(labels=c("0" = "High", "1" = "In Range")) +
+  scale_fill_manual(values=c("#F8766D","#00BA36")) +
+  theme(panel.grid = element_blank(),
+        #axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 6)
+  ) +
+  labs(x = "In Range or No",
+       y = "Number of days",
+       title = "Blood Sugar Levels without Food",
+       caption ="Source: Dexcom CGM")
+```
+
+```{r withwithout-food-figure, echo=FALSE, warning=FALSE, fig.cap="The individual is more likely to wake up in range during nights she did not eat", fig.pos="H"}
+ggarrange(withfood_outcome, withoutfood_outcome)
+```
+
+```{r prep-insulin-with-without-table}
+insulin_withfood_model <- lm(wakeup_level ~ sleep_level + night_insulin, data = insulin_withfood)
+insulin_withfood_model_table <- data.frame(summary(insulin_withfood_model)$coef)
+rownames(insulin_withfood_model_table) <- c('Intercept','Insulin Level at Night','Insulin Took at Night')
+insulin_withfood_model_table$Estimate <- signif(insulin_withfood_model_table$Estimate, 2)
+insulin_withfood_model_table$Std..Error <- signif(insulin_withfood_model_table$Std..Error, 2)
+insulin_withfood_model_table$t.value <- signif(insulin_withfood_model_table$t.value, 2)
+insulin_withfood_model_table$Pr...t.. <- signif(insulin_withfood_model_table$Pr...t.., 2)
+
+insulin_withoutfood_model <- lm(wakeup_level ~ sleep_level + night_insulin, data = insulin_nofood)
+insulin_withoutfood_model_table <- data.frame(summary(insulin_withoutfood_model)$coef)
+rownames(insulin_withoutfood_model_table) <- c('Intercept','Insulin Level at Night','Insulin Took at Night')
+insulin_withoutfood_model_table$Estimate <- signif(insulin_withoutfood_model_table$Estimate, 2)
+insulin_withoutfood_model_table$Std..Error <- signif(insulin_withoutfood_model_table$Std..Error, 2)
+insulin_withoutfood_model_table$t.value <- signif(insulin_withoutfood_model_table$t.value, 2)
+insulin_withoutfood_model_table$Pr...t.. <- signif(insulin_withoutfood_model_table$Pr...t.., 2)
+```
+
+### Group 1: Taking Insulin with Food at Night
+
+Tables \@ref(tab:insulin-with-table) show the results. In this case the null hypothesis can be posited as insulin and food intake in the same night has no correlation with the blood sugar levels in the morning. In addition, it is also hypothesized that blood sugar levels before sleep have no correlation with blood sugar levels in the morning. Results show that no significant values can be seen. There is slight positive correlation between both indpendent variables with the dependent variable, with morning blood sugar levels increasing by 0.065 with each 1 unit increase in insulin level before sleep; and morning blood sugar levels increase by 0.052 for each unit of insulin taken at night. This, however, cannot be considered conclusive, not simply because of the high p-value, but also the idea that these variables cannot tell the whole story. Diagnosis results (See Figure \@ref(fig:diag-withfood)) show that for the most part, the model relatively passes the linearity, collinearity, and normality checks. 
+
+```{r insulin-with-table, fig.pos = "H", out.width = '50%'}
+knitr::kable(insulin_withfood_model_table, escape = F,
+             col.names = c("Estimate","Std Error","t value","p-value"),
+             caption = 'Linear Regression on Blood Sugar Levels in the Morning on Nights with Food and Insulin Intake') %>%
+  row_spec(0,bold=TRUE) %>%
+  kable_styling(full_width = F, latex_options = "hold_position") %>%
+  footnote(c("DV: Blood sugar levels when awake",
+                 "IV: Insulin level at night",
+                 "IV: Amount of insulin took at night"))
+```
+
+```{r diag-withfood, echo=FALSE, warning=FALSE, fig.cap="Diagnostics of linear regression on with food group", fig.pos="H", fig.height = 7.5}
+performance::check_model(insulin_withfood_model)
+```
+
+### Group 2: Taking Insulin without Food at Night
+
+For this group, the null hypothesis is mostly similar to the previous group. The difference is that in this case we are looking at nights in which the individual has taken insulin without food consumption. It is assumed that there is no correlation between blood sugar levels in the morning with both blood sugar levels and amount of insulin taken at night. The results are shown in table \@ref(tab:insulin-without-table). In regards to blood sugar levels the night before, there is no statistical significance in the variable. There is a slight negative correlation in that a unit increase in nighttime blood sugar level results in a 0.2 decrease in morning blood sugar level but the results are inconclusive. However, we see a slight statistical significance in taking insulin at night. The results suggest that for each unit increase in insulin taken at night, blood sugar levels in the morning increase by 0.3. Noting this statistically significant correlation, yet with results contrary to the norm, we once again have a contradiction. Of course, as we cannot be certain as to which assumption this p-value implies is incorrect, there is not much we can do in terms of conclusivity. With how small the smaple size is, the data could change very easily. 
+
+With that said, there are still some new insights to be gleamed. As mentioned, this particular group references nights in which the individual's blood sugar level is particularly uncontrolled. Insulin taken without food consumption naturally implies an already high blood sugar level. It is therefore not a stretch to correlate insulin intake with morning blood sugar levels as insulin was taken in a conscious effort to adjust the values. Figure \@ref(fig:plot-withoutfood) shows the slight positive correlation between the two variables. The model diagnosis (See Figure \@ref(fig:diag-withoutfood)) shows that linearity and homogeneity leaves more to be desired, suggesting that this ultimately is not the best fit for the data. A model card can be found in the [appendix](#model-card).
+
+
+```{r insulin-without-table, fig.pos = "H", out.width = '50%'}
+knitr::kable(insulin_withoutfood_model_table, escape = F,
+             col.names = c("Estimate","Std Error","t value","p-value"),
+             caption = 'Linear Regression on Blood Sugar Levels in the Morning on Nights with Insulin Intake Only') %>%
+  row_spec(0,bold=TRUE) %>%
+  kable_styling(full_width = F, latex_options = "hold_position") %>%
+  footnote(c("DV: Blood sugar levels when awake",
+                 "IV: Insulin level at night",
+                 "IV: Amount of insulin took at night"))
+```
+
+```{r plot-withoutfood, echo=FALSE, warning=FALSE, message=FALSE, fig.cap="Plotting night insulin amount with morning blood sugar levels", fig.pos="H", out.width = '50%'}
+insulin_nofood %>% ggplot(aes(x = night_insulin, y = wakeup_level)) +
+  geom_point() +
+  geom_smooth(method='lm')
+```
+```{r diag-withoutfood, echo=FALSE, warning=FALSE, fig.cap="Diagnostics of linear regression on with food group", fig.pos="H", fig.height = 7.5}
+performance::check_model(insulin_withoutfood_model)
+```
 
 # Discussion
 
-## Final Takeaways
+## Looking Back at Results - Finding Opportunities in Difficult Data
+
+With so many regression models done, and none of them really fitting the data, what can be gleamed from the results? Despite all the flaws in the data, there is one linear variable that has shown high statistical significance and good model fit. That variable is time of day. If you refer back to table \@ref(tab:model-2), you can see that time_of_day_coded has a positive correlation with blood sugar levels. This means for for every unit increase in time of day, the individual's blood sugar level increases by 1.659. In other words, the individual's blood sugar levels in general rises in the afternoon and then further rises again at night. 
+
+Noting that all data points to the individual being an uncontrolled diabetic with the tendency for her blood sugar levels to trend high, several assumptions can be made about the data: 
+
+1. There will be a significant amount of outliers where insulin is taken without any carb consumption (See Figure \@ref(fig:assumption)). 
+
+2. There will be occurrences in which insulin taken is insufficient in counteracting the amount of carbs consumed, leading to a continued high state of blood sugar levels 
+
+3. On average, the individual will be taking a lot more insulin than a controlled diabetic, if all other factors are constant 
+
+As such, the more reliable data points are those at night, when there would be no active attempts at taking insulin or eating carbs. However, that also means that we eliminate nearly all of our available factors when the time period we examine is literally a period of inaction. Therefore, the only direction is a before and after comparison - blood sugar levels before sleep, and blood sugar levels in the morning. A detailed breakdown of table \@ref(tab:sleep-logit-table) has already been covered above. The problem, as I soon realized, was that the uncontrolled diabetic outliers were simply too much interference on the scenarios in which the individual was in control of her blood sugar.
+
+```{r assumption-1-plot}
+assump_1 <- diabetes_full %>% 
+  filter(!is.na(insulin_food)) %>%
+  ggplot(aes(x = factor(insulin_food), fill = factor(insulin_food))) +
+  geom_bar() +
+  geom_text(aes(label=..count..), stat = "count", position=position_dodge(width=0.9), vjust=-0.5) +
+  scale_x_discrete(labels=c("1" = "Insulin w/o carbs", "2" = "Insulin w/ carbs",
+                              "3" = "Carbs w/o insulin")) +
+  scale_fill_manual(values=c("#F8766D","#00BA36","#619CFF")) +
+  theme(panel.grid = element_blank(),
+        #axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 6)
+  ) +
+  labs(x = "In Range or No",
+       y = "Count",
+       title = "What situation does the individual take/not take insulin?",
+       caption ="Source: Dexcom CGM")
+
+```
+
+```{r assumption, echo=FALSE, warning=FALSE, fig.cap="23\\% of times insulin was taken without carbs", out.width = '70%'}
+show(assump_1)
+```
+
+Hence I decided to split the data into 2 groups: the first group consists of data points in which the individual took insulin after eating carbs between the hours of midnight to 7am; the second group consists of data points in which the individual took insulin between the hours of midnight to 7am without eating food, hoping to cover outlier and correctional insulin cases. Ultimately, there were no significant variables in group 1 (results shown in table \@ref(tab:insulin-with-table)), whereas insulin intake showed slight significance in group 2 (results shown in table \@ref(tab:insulin-without-table)). The non-significance in blood sugar levels at night in correlation to blood sugar levels in the morning is unsurprising. There should not be any. There are way too many factors to be able to predict morning blood sugar levels from blood sugar levels 7 hours before. The confounding nature of factors influencing blood sugar levels mean that for group 1, when insulin is taken in response to food, that the model simply does not fit all the variations from simply the influence different types of carbs would have on blood sugar levels. Only when we strip the data points of carb consumption, as in the case of group 2, can we see some slight significant correlation. Blood sugar levels in the morning increased when insulin was taken at night without carbs. With no carbs in the system, blood sugar levels should drop in relation to insulin intake. Since we are not seeing the obvious result, and knowing that the individual spends more time with high blood sugar levels, this implies that either the insulin profile is insufficient in counteracting the natural sugars the blood releases, or that the insulin taken was insufficient in dropping the individual's already high blood sugar levels. A glance at the distribution of before sleep blood sugar levels in group 2 shows that most days the individual goes to sleep with a high blood sugar (>= 11) (See Figure \@ref(fig:sleep-level-nofood)). However, if the former 2 hypotheses are false, then this is a clear indicator of the presence of the dawn phenomenon, in which no matter what the individual's blood sugar level will rise throughout the night into the morning. Unfortunately, the limitations of data available is preventing any concrete conclusions. 
+
+```{r sleep-level-nofood-fig-create}
+pal <- wes_palette("Zissou1", 100, type = "continuous")
+
+sleep_level_nofood_data <- 
+  insulin_nofood %>% 
+  filter(sleep_level != 0) 
+
+sleep_level_nofood_fig <- sleep_level_nofood_data %>%
+  ggplot(aes(x = round(sleep_level))) +
+  geom_bar(fill = "#00BA36") +
+  geom_text(aes(label=..count..), stat = "count", position=position_dodge(width=0.9), vjust=-0.5) +
+  theme(panel.grid = element_blank(),
+        #axis.title = element_blank(),
+        axis.ticks = element_blank(),
+        axis.text.y = element_blank(),
+        panel.background = element_blank(),
+        legend.position = "none",
+        legend.title = element_blank(),
+        plot.title = element_text(size = 10, face = "bold", hjust = 0.5),
+        plot.caption = element_text(size = 6)
+  ) +
+  labs(x = "Before sleep blood sugar level",
+       y = "Count",
+       title = "What is the individual's blood sugar level before sleep",
+       caption ="Source: Dexcom CGM")
+
+```
+
+
+```{r sleep-level-nofood, echo=FALSE, warning=FALSE, fig.cap="Only 4 out of 67 nights were in range", fig.pos="H"}
+show(sleep_level_nofood_fig)
+```
+
+## Causality, or the lack thereof
+
+At this point, it is unfortunate but I must declare that causality is beyond the scope of this project. Fundamentally, this is a dataset of one person, albeit with a long period of time. This takes away the option for a control-intervention style of approach. As for splitting the data, forgetting the significant reduction of sample size (group 1 had 79 rows, group 2 had 67), the problem is that any split has to make too many assumptions for the result to be credible. We would have to assume that all carbs interact with the individual the same way. We would also have to assume that insulin affects the body at the same rate at all times of day. Considering that the pump changes sites every 3 days, with differing insulin effectiveness each time, the data I have simply cannot support any claims of causality. 
+
+## Limitations
+
+### Conclusiveness 
+
+Ultimately, the flaws of this study comes down to the reality that the factors affecting diabetes are as uncertain as they are numerous. DiaTribe, the online publication of the diatribe foundation, listed 42 factors affecting diabetes in 2018 [@cite42factors]. From exercise to dietary habits, no diabetic has the exact same diabetes experience. Moreover, due to privacy limitations, much of the personal information such as exercise habits and weight fluctuations have been withheld from this study. In addition, as data was only collected through the Dexcom CGM, the only food related data available is carb numbers. With sugars, starches, and fiber each impacting blood sugar levels differently, it is impossible to make conclusions about the individual’s dietary habit or even properly predict blood sugar levels from food intake [@citeCarbs]. As such, this study does not attempt to do so and instead opts to select periods with and without food intake as the comparison. 
+
+### Representation 
+
+At the end of the day, this study only covers data on 1 patient. When looking at clinical trials, often we see the push for randomized controlled trials with a representative sample. It is not erroneous to claim that RCTs are the "current gold-standard primary study design for the determination of the efficacy and safety of medical interventions" [@citeRCTlitreview]. A single study simple cannot lead to any meaningful large scale conclusions. This study does not claim to do so, and its goal should not be taken as such. Much like there is merit in a well-designed RCT to show the average treatment effects, you would also need outlier data to see how treatments influence edge cases. In diabetes research while much focus has been designed around controlled diabetics with well-monitored diets, less has been tested on uncontrolled diabetes, especially if they are type 1 with insulin resistance. It is this study's hope to provide one piece of a larger investigation in the lives of uncontrolled diabetics. Managing diabetes is a lifestyle change that honestly some people simply cannot afford, whether it be due to time or money. As such, I believe having more data on uncontrolled diabetics and building research around helping them control their diabetes and isolating key variables in influencing their blood sugar levels is key to help mitigate the costs in managing diabetes. 
+
+## Lessons Learned
+
+### The Project
+
+Working with diabetes data was more complicated than anticipated. The regression results showed how important and difficult the data collection and proper data cleaning methods are in impacting proper predictions. Newer methods of aggregating the data beyond by hour must be brainstormed to take the project further. This is in part because of how the CGM reads data and the reality that insulin is taken when blood sugar is high, and stays in the blood stream in effect for up to 4 hours. Without significantly more data on how insulin interacts with the individual's blood sugar levels, it is difficult to predict blood sugar levels from the current dataset. That said, the alternative that this project tried is also lacking. Focusing on when the individual is asleep runs into the uncertainty known as the dawn phenomenon. In an attempt to predict blood sugar levels in the morning based on nightly blood sugar levels, insulin intake, and carb consumption, the ultimate conclusion that can be derived from all the models is that the individual's blood sugar level somehow rises at night no matter if she has eaten carbs and taken insulin or not. This opens up opportunitites for further research on the dawn phenomenon and allows for better insights in how to manage said phenomenon for uncontrolled diabetics. 
+
+### The World
+
+Indeed, what the data and this project ultimately reveals is the complexity behind diabetes management. Predicting blood sugar levels and utilizing algorithms are only a part of the solution. Keep in mind that the individual, throughout the entire 9 months of this study, was using a combination of the Dexcom CGM and the tandem pump, with Basal-IQ technology. This means that the device itself already predicts the individual's blood sugar levels, suspends insulin delivery when necessary, and calculates the amount of insulin required based on carb intake, a calculation that is in part alogrithmically based and in another determined through discussions with health professionals. Even with all this the difficulties and the multitude of moving factors when managing diabetes is made apparent from how non-linear the data points intersect.
+
+## So what was the point of this study? 
+
+The point of this study therefore is to be a drop in the ocean. A tiny scrap of data in the wide study of diabetes. Certainly there is no detailed carb breakdown, nor does the individual even have consistent sleeping habits. There are even situations in which the individual has forgotten to take insulin. But that is what makes this data real, and true to life. Diabetes is a lifelong illness, one that is exceedingly taxing physically and mentally to control, and one that gets easier the more resources an individual has. What this study has failed to demonstrate, that there lacks a steady correlation between blood sugar levels before and after sleep can hopefully be the foundation of some larger research. The increase in blood sugar levels as the day progresses is also another avenue in which more research can be done. 
+
+Personally however, I was satisfied from what I learned worked and did not work from the models ran. The failures of the data reflected the reality that my fiancee needed to recalibrate her pump's basal and carb ratio, as it became obvious that even with insulin intake at night her blood sugar still rose. The positive correlation of blood sugar levels with the time of day showed room for improvement in controlling her diabetes and calls for increased vigilance as the day progresses. This is a rare occurrence in which I have explanations for every outlier and contradiction that gets thrown at me through the data, and ultimately the inability to find a well fitting model and the presence of significant outliers is telling. 
 
 ## Moving Forward
 
+This study is not over. With the glaring flaws of the dataset there are opportunities both for me and for anyone who wants to expand on this research. In terms of data collection, a new set of data must be gathered. While the flaws of CGM generated data, that is in which we will always need to aggregate by time and insulin will always be taken when blood sugar levels are higher mean that predictions of blood sugar levels after certain amount of hours is exceedingly more difficult than imagined, with enough data it is possible to split off the data so that we are seeing segments of a day in which no other meals are had. That however, would require significantly more samples. 
+
+In addition, this study shows the painful importance of addressing as many influential factors as possible in the data collection process. Proper dietary tracking, in which not only the amount of carbs are logged, but also the distribution of sugars, starches, and fibre is essential in getting a proper model. Likewise, tracking exercise each day is essential for better analyses. With the inclusion of exercise for example, it would become possible to see if exercise as a treatment improves glycemic control. 
+
+For the public, this dataset offers a snapshot of the life of an uncontrolled diabetic. It serves as an additional dataset to add onto treatments designed to focus on the average. What would happen when applied to data in which the blood sugar level only rises throughout the day? Is the insulin intake of this particular dataset above average? If so, is it possible to make assumptions of the individual's insulin resistance? These are questions that cannot be answered within this study due to a lack of knowledge about the field of diabetes research at large, but will nonetheless add onto those who can make use of this data. My sincere hope is that the failures of this study can help assist the development of better research for improving the lives of uncontrolled diabetics. As more data gets collected, the project's GitHub repository will be updated accodingly. For suggestions on improving data collection processes or data requests, please contact Jeremy Chu at jeremychuj@gmail.com. 
+
+
 # References
+
+<div id="refs"></div>
+
+# Appendix
+
+## Datasource Datasheet {#datasource-datasheet}
+
+\includepdf[pages={-}]{datasource-datasheet.pdf}
+
+## Model Card {#model-card}
+\includepdf[pages={-}]{model-card.pdf}

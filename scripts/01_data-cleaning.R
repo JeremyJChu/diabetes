@@ -1,11 +1,18 @@
+#### Preamble ####
+# Purpose: This script is used to create clean and combine all the raw data collected from the CGM. 
+# Data: 24 April 2021
+# Contact: jeremychuj@gmail.com
+# License: MIT
+# Pre-requisites: 
+# - None
+
+#### Workspace setup ####
 #install.packages("readxl")
 #install.packages("anytime")
 library(tidyverse)
 library(readxl)
 library(anytime)
 library(lubridate)
-
-excel_sheets("inputs/data/05_May_2020_raw.xls")
 
 #### Loading in Data ####
 
@@ -115,14 +122,6 @@ Insulin_Carbs_Grouped <-
                                                  carbs = sum(carbs, na.rm = TRUE))
 
 
-# Simple Plotting
-test <- Insulin_Carbs_Grouped %>%
-  filter(year == 2020 & month == 'May') %>%
-  ggplot(aes(x = carbs, y = bolus_volume)) +
-  geom_point()
-
-show(test)
-
 #### Data Transformation for CGM Dataset ####
 
 # Getting rid of unwanted columns
@@ -178,6 +177,14 @@ diabetes_full <-
     hour <= 3 ~ 'evening')
     )
 
+diabetes_full <-
+  diabetes_full %>%
+  mutate(sleep = case_when(
+    hour >= 8 & hour <= 23 ~ 'awake',
+    hour >= 0 & hour <= 7 ~ 'asleep')
+  )
+
+
 # Adding low, high, in_range labels
 
 diabetes_full <-
@@ -221,24 +228,74 @@ diabetes_full <-
     carbs > 0 & bolus_volume == 0 ~ 3  
   ))
 
-meals_per_day <-s
+# Creating a meals per day subset
+meals_per_day <-
   diabetes_full %>%
   group_by(year,month,day) %>% 
   filter(carbs != 0) %>% 
-  summarise(meals_day = sum(!is.na(carbs)))
+  summarise(meals_day = sum(!is.na(carbs)),
+            average_bs = mean(blood_sugar, na.rm = TRUE))
+
+meals_per_day <-
+  meals_per_day %>%
+  mutate(range = case_when(
+    average_bs < 4 ~ 'low',
+    average_bs >= 4 & average_bs < 11 ~ 'in_range',
+    average_bs >= 11 ~ 'high')
+  )
+
+# Eat before bed
+diabetes_full <-
+  diabetes_full %>%
+  mutate(bed_snack = case_when(
+    hour >= 0 & hour <= 3 ~ 'awake',
+    hour >= 0 & hour <= 7 ~ 'asleep')
+  )
+
+# Sleep Data
+
+sleep_data <- diabetes_full %>% filter(diabetes_full$sleep == 'asleep')
+sleep_data <- 
+  sleep_data %>% mutate(bed_food = case_when(
+    carbs > 0 ~ 1,
+    carbs == 0 ~ 0,
+    is.na(carbs) ~ 0
+  ))
+
+# Wake up Range
+sleep_data <- 
+  sleep_data %>% mutate(wakeup_range = case_when(
+    hour == 7 & range == 'in_range' ~ 0,
+    hour == 7 & range == 'high' ~ 1,
+    hour == 7 & range == 'low' ~ 2
+  )) 
+
+# Sleep Level
+sleep_data <- sleep_data %>% mutate(sleep_level = case_when(
+  hour == 0 ~ blood_sugar
+))
+
+# Wakeup Level 
+sleep_data <- sleep_data %>% mutate(wakeup_level = case_when(
+  hour == 7 ~ blood_sugar
+))
+
+# Grouping and Aggregating Sleep Data by Day
+sleep_data_cleaned <- sleep_data %>% group_by(year, month, day) %>% summarise(bed_food = sum(bed_food, na.rm = TRUE),
+                                                        bed_carbs = sum(carbs, na.rm = TRUE),
+                                                        wakeup_range = sum(wakeup_range, na.rm = TRUE),
+                                                        night_insulin = sum(bolus_volume, na.rm = TRUE),
+                                                        sleep_level = sum(sleep_level, na.rm = TRUE),
+                                                        wakeup_level = sum(wakeup_level, na.rm = TRUE))
+
+
+# Encoding insulin taken at night, 0 = no, 1 = yes
+sleep_data_cleaned <- 
+  sleep_data_cleaned %>% mutate(any_insulin = case_when(
+    night_insulin == 0 ~ 0,
+    night_insulin > 0 ~ 1
+  ))
 
 # Writing and saving data
 write_csv(diabetes_full, "inputs/data/13_diabetes-full.csv")
-
-
-# Simple Plotting 2 
-test2 <- diabetes_full %>%
-  #filter(time_of_day == 'morning') %>%
-  ggplot(aes(x = carbs, y = bolus_volume)) +
-  geom_point() +
-  #facet_wrap(~ time_of_day) +
-  facet_grid(~ month)
-
-show(test2)
-
-test2 + facet_grid(rows = vars(time_of_day))
+write_csv(sleep_data_cleaned, "inputs/data/14_sleep-data_cleaned.csv")
