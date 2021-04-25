@@ -4,7 +4,7 @@ Looking at a singular type 1 diabetic with insulin resistance's data through 9 m
 The paper can be found [here](https://github.com/JeremyJChu/diabetes/blob/main/outputs/diabetes.pdf).
 
 ## The Data
-The data is collected for an individual with their explicit consent. All personable identifiable data has been removed from the raw datasets prior to cleaning. A comprehensive datasource datasheet can be found [here](https://github.com/JeremyJChu/diabetes/blob/main/outputs/datasource-datasheet.pdf). You are free to use the data as you see fit given proper credits. For further inquiries, please email jeremychuj@gmail.com.
+The data is collected for an individual with their explicit consent. All personable identifiable data has been removed from the raw datasets prior to cleaning. A comprehensive datasource datasheet can be found [here](https://github.com/JeremyJChu/diabetes/blob/main/outputs/datasource-datasheet.pdf) based on the template describer [here](https://arxiv.org/abs/1803.09010v7). You are free to use the data as you see fit given proper credits. For further inquiries, please email jeremychuj@gmail.com.
 
 
 ## Packages
@@ -38,7 +38,7 @@ The project is entirely reproducible. All data downloading, cleaning, and transf
 I have also taken the liberty in saving all the raw and cleaned datasets and stored them [here](inputs/data). 
 
 ## Models
-The paper runs simple linear and logistic regression models to varying degrees of success. A model card has been created for the model that exhibited the most success. It can be found [here](https://github.com/JeremyJChu/diabetes/blob/main/outputs/model-card.pdf).
+The paper runs simple linear and logistic regression models to varying degrees of success. A model card has been created for the model that exhibited the most success, based on the template [here](https://arxiv.org/pdf/1810.03993.pdf). It can be found [here](https://github.com/JeremyJChu/diabetes/blob/main/outputs/model-card.pdf).
 
 ## Changelog
 New datasets will be updated annually. Please stay tuned here for when they are uploaded.
