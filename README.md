@@ -55,7 +55,3 @@ https://github.com/JeremyJChu
 
 ## Credits
 [Rohan Alexander](https://rohanalexander.com/) for support. 
-
-
-
-
