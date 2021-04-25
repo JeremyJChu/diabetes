@@ -75,7 +75,7 @@ Insulin_Carbs_Full <- rbind(Insulin_Carbs_December_2019,
 #### Data Transformation For Insulin Carbs Dataset ####
 
 # Getting rid of unwanted columns
-drop <- c('Immediate Volume (U)', 'Extended Volume (U)', 'Duration (min)', 'Notes', 'Serial number')          
+drop <- c('Immediate Volume (U)', 'Extended Volume (U)', 'Duration (min)', 'Notes')          
 Insulin_Carbs_Cleaned <- Insulin_Carbs_Full[, !(names(Insulin_Carbs_Full) %in% drop)]
 
 # Dealing with date time
@@ -125,7 +125,7 @@ Insulin_Carbs_Grouped <-
 #### Data Transformation for CGM Dataset ####
 
 # Getting rid of unwanted columns
-drop_cgm <- c('...3','Serial number')
+drop_cgm <- c('...3')
 CGM_Cleaned <- CGM_full[, !(names(CGM_full) %in% drop_cgm)]
 
 # Dealing with date time

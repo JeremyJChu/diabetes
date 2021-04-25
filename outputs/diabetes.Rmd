@@ -99,12 +99,12 @@ The data for this project comes from my fiancee’s (name omitted for privacy’
 ```{r table-1-2-3-4-creation}
 tandem_table <- tibble(
   "Field Name" = c("Time", "Basal Amount", "Bolus Type", "Bolus Volume", "Immediate Volume", "Extended Volume", "Duration", "Carbs", "Total Daily Dose", "Total Daily Basal", "Serial Number"),
-  "Description" = c('Time data was logged', 'Amount of basal taken at the time of data log', 'Whether bolus was fast-acting or normal', 'Amount of bolus taken at the time of data log', "A setting on the pump where insulin can be quickly administered with a button press", "Type of bolus taken where users can take some insulin up front and have the rest admimnistered later", "No data", "Carbs taken at the time of data log", "Summation of total daily bolus taken", "Summation of total daily basal", "Serial number of device")
+  "Description" = c('Time data was logged', 'Amount of basal taken at the time of data log', 'Whether bolus was fast-acting or normal', 'Amount of bolus taken at the time of data log', "A setting on the pump where insulin can be quickly administered with a button press", "Type of bolus taken where users can take some insulin up front and have the rest admimnistered later", "No data", "Carbs taken at the time of data log", "Summation of total daily bolus taken", "Summation of total daily basal", "Serial number of device, removed from dataset prior cleaning")
 )
 
 cgm_table <- tibble(
   "Field Name" = c("Time", "mmol/L", "...3", "Serial Number"),
-  "Description" = c('Time data was logged', 'Blood sugar level at the time of data log', 'No data', "Serial number of device")
+  "Description" = c('Time data was logged', 'Blood sugar level at the time of data log', 'No data', "Serial number of device, removed from dataset prior cleaning")
 )
 
 diabetes_table <- tibble(
@@ -748,7 +748,12 @@ For the public, this dataset offers a snapshot of the life of an uncontrolled di
 
 ## Datasource Datasheet {#datasource-datasheet}
 
+The following datasource datasheet is created following the template provided by @citeDatasheet.
+
 \includepdf[pages={-}]{datasource-datasheet.pdf}
 
 ## Model Card {#model-card}
+
+The following model card is created following the template provided by @citeModelcard.
+
 \includepdf[pages={-}]{model-card.pdf}
